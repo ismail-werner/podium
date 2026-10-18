@@ -18,7 +18,7 @@ const feeds = [
   ["Formula 1", "Motorsport.com", "https://www.motorsport.com/rss/f1/news/"],
   ["Formula 1", "Autosport", "https://www.autosport.com/rss/f1/news/"],
   ["Tennis", "BBC Sport", "https://feeds.bbci.co.uk/sport/tennis/rss.xml"],
-  ["Tennis", "ESPN", "https://www.espn.com/espn/rss/tennis/news"]
+  ["Tennis", "The Guardian", "https://www.theguardian.com/sport/tennis/rss"]
 ];
 
 // Pinned picks. `find` is matched against headline + excerpt.
