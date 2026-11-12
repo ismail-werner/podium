@@ -41,17 +41,35 @@ const fallbackTone = ["#1d1d1f", "#6e6e73"];
 
 let stories = [];
 const $ = id => document.getElementById(id);
-const state = { cat: "Top", q: "", pin: "", saved: new Set(JSON.parse(localStorage.getItem("saved") || "[]")) };
-const fmt = d => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+// Filters live in the URL (?cat=&pin=&q=) so a view can be shared and the back button keeps working.
+const P = new URLSearchParams(location.search);
+const state = { cat: tabs.includes(P.get("cat")) ? P.get("cat") : "Top", q: P.get("q") || "", pin: P.get("pin") || "",
+                saved: new Set(JSON.parse(localStorage.getItem("saved") || "[]")) };
+$("q").value = state.q;
+function sync() {
+  const p = new URLSearchParams();
+  if (state.cat !== "Top") p.set("cat", state.cat);
+  if (state.pin) p.set("pin", state.pin);
+  if (state.q.trim()) p.set("q", state.q.trim());
+  const s = p.toString();
+  history.replaceState(null, "", location.pathname + (s ? "?" + s : "") + location.hash);
+}
+const dateFmt = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" });
+const fmt = d => dateFmt.format(new Date(d));
 // Feed text is untrusted: escape everything that goes into innerHTML.
 const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const text = html => new DOMParser().parseFromString(html || "", "text/html").body.textContent.replace(/\s+/g, " ").trim();
 const hash = s => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
-const art = s => {
+// Real <img> (lazy below the fold, eager for the hero) so the browser can size, defer and cache it.
+const art = (s, first) => {
   const [c1, c2] = tone[s.cat] || fallbackTone;
-  const img = s.img && /^https:\/\//.test(s.img) ? `background:url('${encodeURI(s.img).replace(/'/g, "%27")}') center/cover` : "";
-  return `<div class="art" style="--c1:${c1};--c2:${c2};${img}"></div>`;
+  const img = s.img && /^https:\/\//.test(s.img)
+    ? `<img src="${esc(s.img)}" alt="" width="800" height="600" referrerpolicy="no-referrer" decoding="async" ${first ? 'fetchpriority="high"' : 'loading="lazy"'}>` : "";
+  return `<div class="art" style="--c1:${c1};--c2:${c2}">${img}</div>`;
 };
+const kicker = s => `<span class="kicker"><i class="dot" style="--dot:${(tone[s.cat] || fallbackTone)[1]}"></i>${esc(s.cat)} · ${esc(s.src)}</span>`;
+// A broken picture falls back to the flat colour panel instead of a broken-image icon.
+addEventListener("error", e => { if (e.target.matches?.(".art img")) e.target.remove(); }, true);
 
 async function loadFeed([cat, src, url]) {
   const key = "feed:" + url, cached = JSON.parse(localStorage.getItem(key) || "null");
@@ -78,7 +96,7 @@ async function load() {
   route();
 }
 
-const heart = `<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 2h10v16l-5-4-5 4z"/></svg>`;
+const heart = `<svg aria-hidden="true" viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 2h10v16l-5-4-5 4z"/></svg>`;
 
 function save(id) {
   state.saved.has(id) ? state.saved.delete(id) : state.saved.add(id);
@@ -109,7 +127,7 @@ function renderHero(s) {
   $("hero").hidden = !s;
   if (!s) return;
   $("hero").href = `#/${s.id}`;
-  $("hero").innerHTML = `<div class="inner"><div class="copy"><span class="kicker">${esc(s.cat)} · ${esc(s.src)}</span><h2>${esc(s.title)}</h2><p>${esc(s.lede)}</p><span class="more">Read the story</span></div>${art(s)}</div>`;
+  $("hero").innerHTML = `<div class="inner"><div class="copy">${kicker(s)}<h2>${esc(s.title)}</h2><p>${esc(s.lede)}</p><span class="more">Read the story</span></div>${art(s, true)}</div>`;
 }
 
 function renderGrid() {
@@ -123,14 +141,15 @@ function renderGrid() {
   $("sub").textContent = sub;
   renderHero(hero);
   renderPins();
+  sync();
   $("empty").hidden = all.length > 0;
   $("empty").textContent = !stories.length ? "Loading the latest news…" : state.cat === "Saved" && !state.q ? "Nothing saved yet. Tap the bookmark on any story." : "No stories found. Try a different search.";
   $("grid").innerHTML = list.map((s, i) => `
-    <div class="card" style="--i:${i}">
-      <a href="#/${s.id}" aria-label="${esc(s.title)}">${art(s)}</a>
-      <button class="save" data-id="${s.id}" aria-pressed="${state.saved.has(s.id)}" aria-label="Save story">${heart}</button>
-      <span class="kicker">${esc(s.cat)} · ${esc(s.src)}</span>
-      <a href="#/${s.id}"><h3>${esc(s.title)}</h3></a>
+    <div class="card">
+      <a href="#/${s.id}" tabindex="-1" aria-hidden="true">${art(s)}</a>
+      <button class="save" data-id="${s.id}" aria-pressed="${state.saved.has(s.id)}" aria-label="Save story: ${esc(s.title)}">${heart}</button>
+      ${kicker(s)}
+      <a class="title" href="#/${s.id}"><h3>${esc(s.title)}</h3></a>
       <p>${esc(s.lede)}</p>
       <span class="meta">${fmt(s.date)}${s.read ? ` · ${s.read} min read` : ""}</span>
     </div>`).join("");
@@ -144,7 +163,7 @@ function renderStory(s) {
     <p class="lede">${esc(s.lede)}${s.link ? "…" : ""}</p>
     <div class="byline"><span>${esc(s.cat)} · ${esc(s.src)} · ${fmt(s.date)}${s.read ? ` · ${s.read} min read` : ""}</span>
       <button id="bm">${heart}<span></span></button></div>
-    ${art(s)}
+    ${art(s, true)}
     <div class="body">${s.body.map(p => `<p>${esc(p)}</p>`).join("")}</div>
     ${s.link ? `<a class="btn" href="${esc(s.link)}" target="_blank" rel="noopener noreferrer">Read the full article on ${esc(s.src)}</a>` : ""}
     <div class="next"><span class="kicker">Up next</span><a href="#/${next.id}"><b>${esc(next.title)}</b></a></div>`;
