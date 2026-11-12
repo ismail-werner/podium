@@ -5,6 +5,8 @@ A clean, calm news site for Formula 1 and tennis. Live headlines from several pu
 ## Features
 
 - Live news from BBC Sport, Motorsport.com, Autosport and The Guardian
+- Live F1 card: countdown to the next race and the top 5 drivers’ standings (free [Jolpica](https://api.jolpi.ca) API)
+- A partners section with an investor-brief and partnership contact
 - Tabs for Top stories, Formula 1, Tennis and Saved
 - Pinned picks (Mercedes, Hamilton, Sinner, ATP Finals) that filter the feed in one click
 - Search as you type (press `/` to focus, `Esc` to clear)

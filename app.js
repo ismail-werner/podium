@@ -31,7 +31,7 @@ const pins = [
 
 const tabs = ["Top", "Formula 1", "Tennis", "Saved"];
 const intro = {
-  Top: ["Top stories.", "Formula 1 and tennis, in one calm place."],
+  Top: ["Every lap. Every set.", "Formula 1 and tennis news from the best publishers, in one calm place."],
   "Formula 1": ["Formula 1.", "Every session, every verdict. Mercedes and Hamilton pinned."],
   Tennis: ["Tennis.", "Tours, tournaments and the stories behind them. Sinner and the ATP Finals pinned."],
   Saved: ["Saved.", "Your bookmarked stories."]
@@ -141,6 +141,7 @@ function renderGrid() {
   $("sub").textContent = sub;
   renderHero(hero);
   renderPins();
+  renderLive();
   sync();
   $("empty").hidden = all.length > 0;
   $("empty").textContent = !stories.length ? "Loading the latest news…" : state.cat === "Saved" && !state.q ? "Nothing saved yet. Tap the bookmark on any story." : "No stories found. Try a different search.";
@@ -204,5 +205,45 @@ addEventListener("keydown", e => {
   if (e.key === "Escape") { if (typing) { $("q").value = ""; state.q = ""; $("q").blur(); renderGrid(); } else if (location.hash.length > 2) location.hash = "#/"; }
 });
 
+// Live F1 data from the free Jolpica API (the Ergast successor): next race and the drivers' standings.
+let f1 = null, tick;
+async function loadF1() {
+  const key = "f1", cached = JSON.parse(localStorage.getItem(key) || "null");
+  if (cached && Date.now() - cached.t < 10 * 60e3) return cached.d;
+  const get = p => fetch("https://api.jolpi.ca/ergast/f1/current/" + p).then(r => r.json()).then(j => j.MRData);
+  const [n, s] = await Promise.all([get("next.json"), get("driverStandings.json")]);
+  const race = n.RaceTable.Races[0];
+  const list = s.StandingsTable.StandingsLists[0];
+  const d = {
+    race: race && { name: race.raceName, round: race.round, place: `${race.Circuit.Location.locality}, ${race.Circuit.Location.country}`, at: `${race.date}T${race.time || "12:00:00Z"}` },
+    after: list?.round,
+    top: (list?.DriverStandings || []).slice(0, 5).map(x => ({ pos: x.position, name: `${x.Driver.givenName} ${x.Driver.familyName}`, team: x.Constructors[0].name, pts: x.points }))
+  };
+  try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), d })); } catch {}
+  return d;
+}
+
+const countdown = at => {
+  const ms = new Date(at) - Date.now();
+  if (ms <= 0) return "Race weekend";
+  const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, m = Math.floor(ms / 6e4) % 60;
+  return `${d}d ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m`;
+};
+
+function renderLive() {
+  const show = f1 && (state.cat === "Top" || state.cat === "Formula 1") && !state.q.trim() && !state.pin;
+  $("live").hidden = !show;
+  clearInterval(tick);
+  if (!show) return;
+  const when = f1.race && new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short" }).format(new Date(f1.race.at));
+  $("live").innerHTML = `
+    ${f1.race ? `<div class="live-card"><span class="kicker"><i class="dot" style="--dot:#e10600"></i>Next race · Round ${esc(f1.race.round)}</span>
+      <h3>${esc(f1.race.name)}</h3><p>${esc(f1.race.place)}</p>
+      <b class="count" id="count">${countdown(f1.race.at)}</b><span class="meta">${esc(when)}</span></div>` : ""}
+    ${f1.top.length ? `<div class="live-card"><span class="kicker"><i class="dot" style="--dot:#e10600"></i>Drivers’ standings${f1.after ? ` · After round ${esc(f1.after)}` : ""}</span>
+      <ol class="standings">${f1.top.map(x => `<li><span class="pos">${esc(x.pos)}</span><span class="who">${esc(x.name)}<small>${esc(x.team)}</small></span><b>${esc(x.pts)}</b></li>`).join("")}</ol></div>` : ""}`;
+  if (f1.race) tick = setInterval(() => { const c = $("count"); if (c) c.textContent = countdown(f1.race.at); }, 30e3);
+}
 route();
 load();
+loadF1().then(d => { f1 = d; renderLive(); }).catch(() => {});
