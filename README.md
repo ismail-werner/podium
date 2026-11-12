@@ -9,6 +9,9 @@ A clean, calm news site for Formula 1 and tennis. Live headlines from several pu
 - **Tennis wait tile:** countdown to the next ATP or WTA event, plus what is being played now (ESPN API)
 - **Standings and rankings:** F1 drivers and constructors, ATP and WTA top 10, with points bars and rank changes
 - **Follow:** tap a name to filter the news to it, tap the star to follow it, and the "For you" tab collects their stories
+- **Make your call:** predict the next race or tournament winner (saved on your device)
+- **Head to head:** compare any two drivers or players on points
+- **Source filter:** narrow the news to one publisher
 - Loading skeletons, "Show more" pagination, copy-link sharing and related stories
 - A partners section with an investor-brief and partnership contact
 - Tabs for Top stories, Formula 1, Tennis and Saved
@@ -46,6 +49,7 @@ To change sources, edit the `feeds` list at the top of `app.js`. To change the p
 | `live.js` | Wait tiles, standings and rankings, countdown |
 | `logo.svg` | Logo and favicon |
 | `STARTUP.md` | Business plan and next steps |
+| `PRESENTATION.md` | Pitch, competitor comparison and demo script |
 
 ## Notes
 

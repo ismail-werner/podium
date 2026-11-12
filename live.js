@@ -1,7 +1,8 @@
 // Live sport data: wait tiles, standings and rankings, plus the "follow" list.
 // F1: Jolpica (the Ergast successor). Tennis: ESPN's public site API. Both are free, keyless and allow browser requests.
 // Loaded before app.js; it reads app.js's globals (state, esc, renderGrid...) only when called.
-const liveState = { f1: "Drivers", tennis: "ATP" };
+const liveState = { f1: "Drivers", tennis: "ATP", h2h: { f1: [0, 3], tennis: [0, 1] } };
+const picks = JSON.parse(localStorage.getItem("picks") || "{}"); // { contest: key }, kept on this device only
 let f1 = null, tn = null, liveSig = "";
 const rank = {}, loading = {}, failed = {}, done = {}, names = {};
 const follow = JSON.parse(localStorage.getItem("follow") || "[]"); // [{ k: match key, n: display name }]
@@ -134,6 +135,35 @@ function board(sport, title, opts, rows, foot) {
     <p class="foot">${foot}</p></section>`;
 }
 
+const nextTennis = () => tn.events.filter(e => new Date(e.start) > Date.now()).sort((a, b) => a.start.localeCompare(b.start))[0];
+const short = n => n.split(" ").slice(-1)[0];
+
+function predictTile(contest, title, rows, closesAt) {
+  const closed = new Date(closesAt) <= Date.now(), mine = picks[contest];
+  const foot = closed ? "Predictions are closed." : mine ? "Locked in. Tap another name to change your call until it starts." : "Pick one. Your call is saved on this device.";
+  return `<section class="tile mini predict" aria-label="Make your prediction"><span class="kicker">Make your call</span><h3>${esc(title)}</h3>
+    <div class="chips" role="group" aria-label="Pick a winner">${rows.map(r => `<button class="chip" data-contest="${esc(contest)}" data-key="${esc(r.key)}" aria-pressed="${mine === r.key}"${closed ? " disabled" : ""}>${esc(short(r.name))}</button>`).join("")}</div>
+    <p class="foot">${foot}</p></section>`;
+}
+
+function duel(rows, i, j) {
+  const A = rows[i], B = rows[j];
+  if (!A || !B || A === B) return `<p class="gap">Pick two different names to compare.</p>`;
+  const tot = (A.pts + B.pts) || 1, gap = A.pts - B.pts;
+  const side = (r, cls) => `<div class="${cls}"><b>${r.pts.toLocaleString()}</b><span>${esc(r.name)}</span><small>P${r.pos}${r.sub ? " · " + esc(r.sub) : ""}</small></div>`;
+  return `<div class="duel">${side(A, "l")}${side(B, "r")}</div>
+    <div class="splitbar" role="img" aria-label="${esc(A.name)} ${A.pts} points, ${esc(B.name)} ${B.pts} points"><i style="--a:${(A.pts / tot * 100).toFixed(1)}%"></i></div>
+    <p class="gap">${gap === 0 ? "Level on points" : `${esc(short((gap > 0 ? A : B).name))} leads by ${Math.abs(gap).toLocaleString()} points`}</p>`;
+}
+
+function h2hTile(sport, rows) {
+  const [a, b] = liveState.h2h[sport], who = sport === "f1" ? "driver" : "player";
+  const sel = (side, idx) => `<select data-h2h="${side}" data-sport="${sport}" aria-label="Choose ${side === "a" ? "first" : "second"} ${who}">${rows.map((r, i) => `<option value="${i}"${i === idx ? " selected" : ""}>${esc(r.name)}</option>`).join("")}</select>`;
+  return `<section class="tile mini h2h" data-sport="${sport}" aria-label="Head to head"><span class="kicker">Head to head</span>
+    <div class="vs-pick">${sel("a", a)}<span>vs</span>${sel("b", b)}</div><div class="vs">${duel(rows, a, b)}</div></section>`;
+}
+const h2hRows = sport => sport === "f1" ? f1?.Drivers : rank[liveState.tennis]?.rows;
+
 const skel = `<div class="tile skel" aria-hidden="true"></div>`;
 
 function need(key, fn, set) {
@@ -165,6 +195,15 @@ function renderLive() {
   if (view === "tennis" && !rkFailed) tiles.push(rank[rk]
     ? board("tennis", "Rankings", ["ATP", "WTA"], rank[rk].rows, `Updated ${md.format(new Date(rank[rk].updated))} · Data: ESPN`)
     : skel);
+  if (view === "f1" && f1?.race) {
+    tiles.push(predictTile("f1:" + f1.race.name, `Who wins the ${f1.race.name}?`, f1.Drivers.slice(0, 6), f1.race.at));
+    tiles.push(h2hTile("f1", f1.Drivers));
+  }
+  if (view === "tennis" && tn && rank[rk]) {
+    const n = nextTennis();
+    if (n && rank[n.tour]) tiles.push(predictTile("tn:" + n.name, `Who lifts the ${n.name}?`, rank[n.tour].rows.slice(0, 6), n.start));
+    tiles.push(h2hTile("tennis", rank[rk].rows));
+  }
   el.innerHTML = tiles.join("");
   el.dataset.view = view;
   el.hidden = !tiles.length;
@@ -186,10 +225,29 @@ L().addEventListener("click", e => {
     return;
   }
 
+  const chip = e.target.closest(".chip");
+  if (chip) {
+    const c = chip.dataset.contest, same = picks[c] === chip.dataset.key;
+    same ? delete picks[c] : picks[c] = chip.dataset.key;
+    localStorage.setItem("picks", JSON.stringify(picks));
+    chip.parentElement.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", picks[c] === x.dataset.key));
+    chip.closest(".predict").querySelector(".foot").textContent = same ? "Pick one. Your call is saved on this device." : "Locked in. Tap another name to change your call until it starts.";
+    if (!same && !reduce.matches) chip.animate([{ transform: "scale(1)" }, { transform: "scale(1.12)" }, { transform: "scale(1)" }], { duration: 300, easing: "ease-out" });
+    return;
+  }
+
   const who = e.target.closest(".who");
   if (who) {
     state.pin = who.dataset.find; state.shown = PAGE;
     renderGrid();
     document.getElementById("title").scrollIntoView({ block: "start" });
   }
+});
+
+L().addEventListener("change", e => {
+  const s = e.target.closest("[data-h2h]");
+  if (!s) return;
+  const sport = s.dataset.sport, pair = liveState.h2h[sport];
+  pair[s.dataset.h2h === "a" ? 0 : 1] = +s.value;
+  s.closest(".h2h").querySelector(".vs").innerHTML = duel(h2hRows(sport), pair[0], pair[1]);
 });

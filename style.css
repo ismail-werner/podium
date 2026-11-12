@@ -149,7 +149,9 @@ footer{margin-top:96px;padding-bottom:env(safe-area-inset-bottom);border-top:1px
 .cal:hover{background:rgba(255,255,255,.14)}
 .cal:active{transform:scale(.98)}
 
-.tile.board{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.tile.board,.tile.mini{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.tile.mini{min-height:0}
+.tile.mini h3{font-size:24px}
 .board-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .board-head h3{margin:0;font-size:24px}
 .seg{display:flex;padding:3px;border-radius:980px;background:var(--soft)}
@@ -215,3 +217,24 @@ footer{margin-top:96px;padding-bottom:env(safe-area-inset-bottom);border-top:1px
 .partners .more{margin:0 0 0 24px}
 @media(max-width:860px){.live{grid-template-columns:1fr}.tile{min-height:0;padding:26px}.pillars{grid-template-columns:1fr;gap:28px}.partner-link{display:none}.partners{margin-top:80px}}
 .more-wrap:has(#showmore[hidden]){display:none}
+
+/* chips, predictions, head to head */
+.chips,.sources{display:flex;flex-wrap:wrap;gap:8px}
+.sources{padding-top:28px}
+.chip{padding:8px 16px;border-radius:980px;background:var(--soft);font-size:14px;font-weight:500;color:var(--strong);transition:background .15s,color .15s,transform .15s}
+.chip:hover:not(:disabled){background:var(--line)}
+.chip:active:not(:disabled){transform:scale(.96)}
+.chip[aria-pressed=true]{background:var(--strong);color:var(--bg)}
+.chip:disabled{opacity:.5;cursor:not-allowed}
+.predict .chips{margin-top:20px}
+.predict .foot{margin-top:18px;padding-top:0}
+.vs-pick{display:flex;align-items:center;gap:10px;margin-top:16px;color:var(--muted);font-size:14px}
+.vs-pick select{flex:1;min-width:0;height:40px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background-color:var(--soft);color:var(--strong);font:inherit;font-size:15px}
+.duel{display:flex;justify-content:space-between;gap:16px;margin-top:22px}
+.duel .r{text-align:right}
+.duel b{display:block;font-size:clamp(28px,4vw,38px);font-weight:700;letter-spacing:-.03em;line-height:1;color:var(--strong);font-variant-numeric:tabular-nums}
+.duel span{display:block;margin-top:6px;font-weight:600;color:var(--strong);line-height:1.2}
+.duel small{display:block;font-size:13px;color:var(--muted)}
+.splitbar{height:8px;margin-top:18px;border-radius:980px;background:var(--line);overflow:hidden}
+.splitbar i{display:block;height:100%;width:var(--a);border-radius:980px;background:var(--accent);transition:width .4s var(--ease)}
+.gap{margin-top:12px;font-size:14px;color:var(--muted)}

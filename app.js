@@ -45,7 +45,7 @@ let stories = [];
 const $ = id => document.getElementById(id);
 // Filters live in the URL (?cat=&pin=&q=) so a view can be shared and the back button keeps working.
 const P = new URLSearchParams(location.search);
-const state = { cat: tabs.includes(P.get("cat")) ? P.get("cat") : "Top", q: P.get("q") || "", pin: P.get("pin") || "", shown: PAGE,
+const state = { cat: tabs.includes(P.get("cat")) ? P.get("cat") : "Top", q: P.get("q") || "", pin: P.get("pin") || "", src: P.get("src") || "", shown: PAGE,
                 saved: new Set(JSON.parse(localStorage.getItem("saved") || "[]")) };
 $("q").value = state.q;
 function sync() {
@@ -53,6 +53,7 @@ function sync() {
   if (state.cat !== "Top") p.set("cat", state.cat);
   if (state.pin) p.set("pin", state.pin);
   if (state.q.trim()) p.set("q", state.q.trim());
+  if (state.src) p.set("src", state.src);
   const s = p.toString();
   history.replaceState(null, "", location.pathname + (s ? "?" + s : "") + location.hash);
 }
@@ -109,6 +110,7 @@ function visible() {
   const q = state.q.trim().toLowerCase();
   return stories.filter(s =>
     (state.cat === "Top" || (state.cat === "Saved" ? state.saved.has(s.id) : state.cat === "For you" ? follow.some(f => (s.title + " " + s.lede).toLowerCase().includes(f.k)) : s.cat === state.cat)) &&
+    (!state.src || s.src === state.src) &&
     (!state.pin || (s.title + " " + s.lede).toLowerCase().includes(state.pin)) &&
     (!q || (s.title + s.lede + s.cat + s.src).toLowerCase().includes(q)));
 }
@@ -118,6 +120,14 @@ function renderTabs() {
     const n = c === "Saved" ? state.saved.size : c === "For you" ? follow.length : 0;
     return `<button role="tab" aria-selected="${c === state.cat}" data-cat="${esc(c)}">${esc(c)}${n ? `<i>${n}</i>` : ""}</button>`;
   }).join("");
+}
+
+function renderSources() {
+  // Chips come from the stories in the current tab, so every chip leads somewhere.
+  const inTab = stories.filter(s => ["Top", "For you", "Saved"].includes(state.cat) || s.cat === state.cat);
+  const srcs = [...new Set(inTab.map(s => s.src))].sort();
+  $("sources").hidden = srcs.length < 2;
+  $("sources").innerHTML = ["", ...srcs].map(x => `<button class="chip" data-src="${esc(x)}" aria-pressed="${state.src === x}">${x ? esc(x) : "All sources"}</button>`).join("");
 }
 
 function renderPins() {
@@ -158,6 +168,7 @@ function renderGrid() {
   $("clearpin").hidden = !state.pin;
   renderHero(hero);
   renderPins();
+  renderSources();
   renderLive();
   sync();
   const loadingNews = !stories.length;
@@ -220,6 +231,10 @@ $("grid").onclick = e => {
 $("q").oninput = e => {
   state.q = e.target.value; state.shown = PAGE;
   if (location.hash !== "#/" && location.hash) location.hash = "#/"; else renderGrid();
+};
+$("sources").onclick = e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  state.src = b.dataset.src; state.shown = PAGE; renderGrid();
 };
 $("clearpin").onclick = () => { state.pin = ""; state.shown = PAGE; renderGrid(); };
 $("showmore").onclick = () => { state.shown += PAGE; renderGrid(); };
