@@ -5,7 +5,11 @@ A clean, calm news site for Formula 1 and tennis. Live headlines from several pu
 ## Features
 
 - Live news from BBC Sport, Motorsport.com, Autosport and The Guardian
-- Live F1 card: countdown to the next race and the top 5 drivers’ standings (free [Jolpica](https://api.jolpi.ca) API)
+- **F1 wait tile:** live countdown to the next race, the full weekend schedule in your local time, and an "Add to calendar" button (Jolpica API)
+- **Tennis wait tile:** countdown to the next ATP or WTA event, plus what is being played now (ESPN API)
+- **Standings and rankings:** F1 drivers and constructors, ATP and WTA top 10, with points bars and rank changes
+- **Follow:** tap a name to filter the news to it, tap the star to follow it, and the "For you" tab collects their stories
+- Loading skeletons, "Show more" pagination, copy-link sharing and related stories
 - A partners section with an investor-brief and partnership contact
 - Tabs for Top stories, Formula 1, Tennis and Saved
 - Pinned picks (Mercedes, Hamilton, Sinner, ATP Finals) that filter the feed in one click
@@ -38,10 +42,11 @@ To change sources, edit the `feeds` list at the top of `app.js`. To change the p
 |---|---|
 | `index.html` | Page structure |
 | `style.css` | Design |
-| `app.js` | Feeds, search, routing, bookmarks |
+| `app.js` | News feeds, search, routing, bookmarks, follow |
+| `live.js` | Wait tiles, standings and rankings, countdown |
 | `logo.svg` | Logo and favicon |
 | `STARTUP.md` | Business plan and next steps |
 
 ## Notes
 
-rss2json's free tier has a daily request limit. For a public launch, replace it with your own small backend that fetches the feeds.
+The tennis rankings files from ESPN are large, so they load only when the Tennis tab is opened and only the top 10 are kept. rss2json's free tier has a daily request limit. For a public launch, replace it with your own small backend that fetches the feeds.

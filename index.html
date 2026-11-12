@@ -34,6 +34,7 @@
     <header class="intro wrap" aria-live="polite">
       <h1 id="title">Top stories.</h1>
       <p id="sub"></p>
+      <button class="clear" id="clearpin" hidden>Clear filter</button>
     </header>
     <div class="pins wrap" id="pins" aria-label="Pinned picks"></div>
     <div class="live wrap" id="live" hidden></div>
@@ -42,6 +43,7 @@
     <section class="wrap" aria-label="Stories">
       <div class="grid" id="grid"></div>
       <p class="empty" id="empty" role="status" hidden>No stories found. Try a different search.</p>
+      <div class="more-wrap"><button class="btn-soft" id="showmore" hidden>Show more stories</button></div>
     </section>
   </div>
 
@@ -61,6 +63,7 @@
 </main>
 
 <footer><div class="wrap">Copyright © 2026 <span translate="no">Podium</span>. Headlines link to their original publishers.</div></footer>
+<script src="live.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
